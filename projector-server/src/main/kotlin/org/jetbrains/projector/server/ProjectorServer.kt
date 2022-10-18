@@ -699,8 +699,14 @@ class ProjectorServer private constructor(
     updateThread = createUpdateThread()
     caretInfoUpdater.start()
 
-    WebsocketServer.createTransportBuilders().forEach {
-      addTransport(it.attachDefaultServerEventHandlers(clientEventHandler).build())
+    when (ENABLE_JETTY_WS_SERVER) {
+      true -> WebsocketServer.createJTransportBuilders().forEach {
+        addTransport(it.attachDefaultServerEventHandlers(clientEventHandler).build())
+
+      }
+      false -> WebsocketServer.createTransportBuilders().forEach {
+        addTransport(it.attachDefaultServerEventHandlers(clientEventHandler).build())
+      }
     }
   }
 
@@ -935,5 +941,8 @@ class ProjectorServer private constructor(
     fun isLocalAddress(address: InetAddress) = address in LOCAL_ADDRESSES
 
     private val isMac get() = System.getProperty("os.name").startsWith("Mac OS")
+
+    private const val ENABLE_JETTY_WS_SERVER_CONF = "ORG_JETBRAINS_PROJECTOR_SERVER_ENABLE_JETTY_WS"
+    val ENABLE_JETTY_WS_SERVER = getOption(ENABLE_JETTY_WS_SERVER_CONF, "true").toBoolean()
   }
 }
