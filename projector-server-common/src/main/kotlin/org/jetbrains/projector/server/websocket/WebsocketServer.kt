@@ -27,6 +27,8 @@ import org.jetbrains.projector.common.protocol.data.ImageData
 import org.jetbrains.projector.common.protocol.data.ImageId
 import org.jetbrains.projector.common.protocol.toClient.MainWindow
 import org.jetbrains.projector.server.ProjectorServer
+import org.jetbrains.projector.server.core.jwebsocket.JHttpWsServerBuilder
+import org.jetbrains.projector.server.core.jwebsocket.JWsTransportBuilder
 import org.jetbrains.projector.server.core.websocket.HttpWsClientBuilder
 import org.jetbrains.projector.server.core.websocket.HttpWsServerBuilder
 import org.jetbrains.projector.server.core.websocket.WsTransportBuilder
@@ -70,6 +72,35 @@ object WebsocketServer {
       }
 
       builders.add(serverBuilder)
+    }
+    return builders
+  }
+
+  internal fun createJTransportBuilders(): List<JWsTransportBuilder> {
+    val builders = arrayListOf<JWsTransportBuilder>()
+
+    // Not implement relay using !!
+
+    if (getOption(ENABLE_WS_SERVER_PROPERTY, "true").toBoolean()) {
+      val host = ProjectorServer.getEnvHost()
+      val port = ProjectorServer.getEnvPort()
+      logger.info { "${ProjectorServer::class.simpleName} is starting on host $host and port $port" }
+
+      val jserverBuilder = JHttpWsServerBuilder(host, port)
+
+      jserverBuilder.getMainWindows = {
+        ProjectorServer.getMainWindows().map {
+          MainWindow(
+            title = it.title,
+            pngBase64Icon = it.icons
+              ?.firstOrNull()
+              ?.let { imageId -> ProjectorImageCacher.getImage(imageId as ImageId) as? ImageData.PngBase64 }
+              ?.pngBase64,
+          )
+        }
+      }
+
+      builders.add(jserverBuilder)
     }
     return builders
   }
